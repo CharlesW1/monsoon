@@ -1,6 +1,6 @@
 import requests
 
-class LolAlytics:
+class LoLalytics:
     def __init__(self):
         self.url = "https://ax.lolalytics.com/tierlist/1/?lane=middle&patch=14&tier=emerald_plus&queue=450&region=all"
         self.__lolalytics_json = self._fetch_winrate_json()
@@ -22,14 +22,20 @@ class LolAlytics:
         Returns:
             dict: dict representation of the json returned
         """
-        pass
+        response = requests.get(self.url)
+
+        if response.status_code != 200:
+            raise Exception("Failed to get Winrate JSON from LoLalytics")
+        
+        try:
+            return response.json()
+        except:
+            raise Exception("Failed to convert JSON from LoLalytics")
 
     def _process_winrate_data(self) -> dict:
         """Process winrate json into dict of winrate models"""
         pass
     
-    def fetch_winrate_by_champion_id(self, name) -> WinrateModel:
+    def fetch_winrate_by_champion_id(self, name):
         """Finda a WinrateModel instance for a champion id"""
         pass
-
-    
