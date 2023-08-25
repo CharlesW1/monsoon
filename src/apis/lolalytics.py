@@ -33,9 +33,27 @@ class LoLalytics:
             raise Exception("Failed to convert JSON from LoLalytics")
 
     def _process_winrate_data(self) -> dict:
-        """Process winrate json into dict of winrate models"""
-        pass
-    
+        """Process winrate json into dict of cid -> rank, winrate pair"""
+        data = self.__lolalytics_json["cid"]
+        winrates = {}
+        for x in data:
+            '''data is a map from
+            cid -> [
+                rank, 
+                ?? (all entries seems to be 3),
+                int (mapped to tier), 
+                wins in tier, 
+                games in tier,
+                ?? (all entries seems to be 0),
+                overall wins,
+                overall games
+            ]
+            '''
+            winrate = 100*float(data[x][3])/float(data[x][4])
+            winrates[int(x)] = (data[x][0], f"{winrate:.2f}")
+        return winrates
+
+
     def fetch_winrate_by_champion_id(self, name):
-        """Finda a WinrateModel instance for a champion id"""
+        """Return formated rank, winrate data for a champion id"""
         pass
