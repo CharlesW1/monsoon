@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from lupa import LuaRuntime
 
 from models import DynamicBalanceModel, BalanceLever
-from apis import LoLalytics
+from .lolalytics import LoLalytics
 
 
 class LolFandom:
@@ -12,8 +12,8 @@ class LolFandom:
         self.url = "https://leagueoflegends.fandom.com"
         # Upstream; parses from Lua data module
         self.__championdata_module = self._fetch_championdata_module()
-        self.__dynamic_balances_by_key = self._process_championdata_module()
         self.__LoLalytics = LoLalytics()
+        self.__dynamic_balances_by_key = self._process_championdata_module()
 
     def fetch_dynamic_balance_by_champion_name(self, name) -> DynamicBalanceModel:
         """Finds a DynamicBalanceModel instance for a champion name. May return None
