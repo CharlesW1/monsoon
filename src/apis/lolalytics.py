@@ -56,5 +56,10 @@ class LoLalytics:
     def fetch_winrate_by_champion_id(self, id) -> str:
         """Return formated rank, winrate data for a champion id"""
         def format(rank, winrate) -> str:
-            return "Rank: {}\nWinrate: {}\n".format(rank, winrate)
-        return format(*self.__winrates_by_key[id])
+            return "Rank: {}\nWinrate: {}".format(rank, winrate)
+        if id in self.__winrates_by_key:
+            return format(*self.__winrates_by_key[id])
+        fallback = int(str(id).split(".")[0])
+        if fallback in self.__winrates_by_key:
+            return format(*self.__winrates_by_key[fallback])
+        return ""
