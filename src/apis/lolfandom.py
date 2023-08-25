@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from lupa import LuaRuntime
 
 from models import DynamicBalanceModel, BalanceLever
+from apis import LoLalytics
 
 
 class LolFandom:
@@ -12,6 +13,7 @@ class LolFandom:
         # Upstream; parses from Lua data module
         self.__championdata_module = self._fetch_championdata_module()
         self.__dynamic_balances_by_key = self._process_championdata_module()
+        self.__LoLalytics = LoLalytics()
 
     def fetch_dynamic_balance_by_champion_name(self, name) -> DynamicBalanceModel:
         """Finds a DynamicBalanceModel instance for a champion name. May return None
@@ -25,8 +27,6 @@ class LolFandom:
         champion in ARAM from Module:ChampionData.
     """
         value = self.__dynamic_balances_by_key.get(name)
-        if not value:
-            value = DynamicBalanceModel(name, [])
         return value
 
     def _fetch_championdata_module(self) -> str:
@@ -91,18 +91,21 @@ class LolFandom:
         dynamic_balances = {}
         # Create dynamic balance model data for each champion
         for kv_tuple in items:
+            champion_id = kv_tuple[1]["id"]
+            rank_winrate = self.__LoLalytics.fetch_winrate_by_champion_id(champion_id)
             champion_name = kv_tuple[0]
-            aram_stats = kv_tuple[1]["stats"]["aram"]
-            # None type means there is no ARAM changes for champion
-            if aram_stats is not None:
-                balance_items = list(aram_stats.items())
-                balance_levers = []
-                for balance_tuple in balance_items:
-                    balance_levers.append(BalanceLever(balance_tuple[0], balance_tuple[1]))
-                # Insert new model into dictionary
-                dynamic_balances.update({champion_name: DynamicBalanceModel(
-                    champion_name=champion_name,
-                    balance_levers=balance_levers
-                )})
+            aram_stats = kv_tuple[1]["stats"]["aram"] or {}
+    
+            balance_items = list(aram_stats.items())
+            balance_levers = []
+            for balance_tuple in balance_items:
+                balance_levers.append(BalanceLever(balance_tuple[0], balance_tuple[1]))
+            # Insert new model into dictionary
+            dynamic_balances.update({champion_name: DynamicBalanceModel(
+                champion_id=champion_id,
+                rank_winrate=rank_winrate,
+                champion_name=champion_name,
+                balance_levers=balance_levers
+            )})
 
         return dynamic_balances

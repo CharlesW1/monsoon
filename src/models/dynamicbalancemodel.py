@@ -9,6 +9,8 @@ class DynamicBalanceModel:
     """Data class that represents balance levers for a champion. The amount of
     levers can differ for each champion.
     """
+    champion_id: int
+    rank_winrate: str
     champion_name: str
     balance_levers: List[BalanceLever]
     champion_icon: Optional[bytes] = None
@@ -36,4 +38,4 @@ class DynamicBalanceModel:
     """
         balance_lever_strings = [x.format() for x in self.balance_levers]
         balance_lever_strings.sort()
-        return balance_lever_strings
+        return [self.rank_winrate, *balance_lever_strings]
