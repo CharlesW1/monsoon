@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     pass
 
-from apis import DataDragon, LolFandom
+from apis import DataDragon, LolFandom, LoLalytics
 
 
 class ApiService:
@@ -14,3 +14,4 @@ class ApiService:
     ):
         self.data_dragon = DataDragon()
         self.lol_fandom = LolFandom()
+        self.lolalytics = LoLalytics()
