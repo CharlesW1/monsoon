@@ -92,8 +92,8 @@ class LolFandom:
         # Create dynamic balance model data for each champion
         for kv_tuple in items:
             champion_id = kv_tuple[1]["id"]
-            rank_winrate = self.__LoLalytics.fetch_winrate_by_champion_id(champion_id)
             champion_name = kv_tuple[0]
+            rank_winrate = self.__LoLalytics.fetch_winrate_by_champion(champion_name)
             aram_stats = kv_tuple[1]["stats"]["aram"] or {}
     
             balance_items = list(aram_stats.items())

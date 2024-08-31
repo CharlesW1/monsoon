@@ -1,12 +1,17 @@
 import requests
+import json
+import re
+from bs4 import BeautifulSoup
+
 
 class LoLalytics:
     def __init__(self):
-        self.url = "https://ax.lolalytics.com/tierlist/1/?lane=middle&patch=14&tier=emerald_plus&queue=450&region=all"
-        self.__lolalytics_json = self._fetch_winrate_json()
-        self.__winrates_by_key = self._process_winrate_data()
+        self.url = "https://lolalytics.com/lol/tierlist/aram/?patch=14"
+        self.champ_url = "https://lolalytics.com/lol/{}/aram/build/?patch=14"
+        self.__champs, self.__champsData = self._fetch_winrate_json()
+        self.__winrates_by_champ = self._process_winrate_data()
 
-    def _fetch_winrate_json(self) -> dict:
+    def _fetch_winrate_json(self) -> tuple[list, list]:
         """Fetch the json from lolalytics.com that contains ARAM win rates for each
         champion over that past 14 days from the emerald+ elo. 
         
@@ -25,41 +30,137 @@ class LoLalytics:
         response = requests.get(self.url)
 
         if response.status_code != 200:
-            raise Exception("Failed to get Winrate JSON from LoLalytics")
+            raise Exception("LoLalytics did not respond 200")
         
         try:
-            return response.json()
+            soup = BeautifulSoup(response.text, "html.parser")
+            div = soup.find('div', class_='ml-auto text-right')
+            script_tag = soup.find('script', {'type': 'qwik/json'})
+
+            if not div or not script_tag:
+                raise Exception
+            
+            # process div for avgWR (needed to parse the script json object dynamically)
+            text = div.get_text(strip=True)
+            match = re.search(r'(\d+\.\d+)', text)
+            if match:
+                avgWR = float(match.group(1))
+
+            # process script_tag for the scripted json object
+            json_text = script_tag.string.strip()  
+            data = json.loads(json_text)
+
+            # grab the {champ : ?? id } dictionary
+            for i, x in enumerate(data['objs']):
+                if isinstance(x, dict) and i > 265:
+                    numChamps = len(list(x.keys()))
+                    champs = list(x.keys())
+                    break
+            
+            # find index of average wr info (marks begining of champ specific info)
+            for i, x in enumerate(data['objs'][1000:]):
+                if isinstance(x, float) and x == avgWR:
+                    avgWRIndex = i + 1000
+                    break
+            
+            # organize champ data by champ (some info is randomly missing for each champ)
+            champsData = [[]]
+            i = avgWRIndex+2
+            while len(champsData) < numChamps + 1:
+                champsData[-1].append(data['objs'][i])
+                if isinstance(data['objs'][i], dict):
+                    champsData.append([])
+                i+=1
+
+            return champs, champsData
         except:
-            raise Exception("Failed to convert JSON from LoLalytics")
+            raise Exception("Failed to grab JSON from LoLalytics")
+
+    def _fetch_winrate_for_champ(self, champ) -> float:
+        """Visit champion page directly and grab winrate info"""
+        response = requests.get(self.champ_url.format(champ))
+
+        if response.status_code != 200:
+            raise Exception("LoLalytics did not respond 200")
+        
+        try:
+            soup = BeautifulSoup(response.text, "html.parser")
+            # Find the specific <p> tag with the given class
+            p_tag = soup.find('p', class_='lolx-links px-2 text-justify text-[14px] leading-normal text-white sm:px-0')
+
+            # Use regex to find the float before the % symbol
+            match = re.search(r'(\d+\.?\d*)%', p_tag.get_text())
+            if match:
+                return float(match.group(1))
+            
+            return -1
+        except:
+            raise Exception("Failed to find win rate for {}".format(champ))
+
+        
+
 
     def _process_winrate_data(self) -> dict:
         """Process winrate json into dict of cid -> rank, winrate pair"""
-        data = self.__lolalytics_json["cid"]
+        champs = self.__champs
+        champsData = self.__champsData
         winrates = {}
-        for x in data:
-            '''data is a map from
-            cid -> [
-                rank, 
-                ?? (all entries seems to be 3),
-                int (mapped to tier), 
-                wins in tier, 
-                games in tier,
-                ?? (all entries seems to be 0),
-                overall wins,
-                overall games
-            ]
+        wrById = {}
+        for champ, data in zip(champs, champsData):
+            '''data is a list of
+            [rank, winrate, wr delta, pick rate, games, some id dict]
+            note they can be missing entries because the website is fun :X
+            # one reason is that they don't show the same wr twice so one champion will be missing
             '''
-            winrate = 100*float(data[x][3])/float(data[x][4])
-            winrates[int(x)] = (data[x][0], f"{winrate:.2f}")
+            # first slot is wr as decimal
+            if isinstance(data[0], float) and 38 < data[0] and data[0] < 62:
+                winrates[champ] = data[0]
+                wrById[data[-1]['wr']] = (data[0], champ)
+                continue
+            # second slot is wr as decimal
+            if isinstance(data[1], float) and 38 < data[1] and data[1] < 62:
+                winrates[champ] = data[1]
+                wrById[data[-1]['wr']] = (data[1], champ)
+                continue
+
+            # wr happens to be int first slot (check next slot is delta/pr)
+            if (isinstance(data[0], int) and 38 < data[0] and data[0] < 62 and
+                isinstance(data[1], float) and data[1] < 10):
+                winrates[champ] = data[0]
+                wrById[data[-1]['wr']] = (data[0], champ)
+                continue
+
+        # fill in guessed wr
+        missingInfo = set()
+        for champ, data in zip(champs, champsData):
+            if champ in winrates:
+                continue
+            if data[-1]['wr'] in wrById:
+                winrates[champ] = wrById[data[-1]['wr']][0]
+                continue
+            missingInfo.add(champ)
+
+        # remaining champs seem to have integer wr that is just missing
+        # fetch directly from their champ page
+        for champ in missingInfo:
+            winrates[champ] = self._fetch_winrate_for_champ(champ)
+
+        wrSorted = sorted([(-wr, champ) for champ, wr in winrates.items()])
+
+        for rank, x in enumerate(wrSorted, 1):
+            winrates[x[1]] = (rank, winrates[x[1]])
         return winrates
 
-    def fetch_winrate_by_champion_id(self, id) -> str:
-        """Return formated rank, winrate data for a champion id"""
+    def fetch_winrate_by_champion(self, champ) -> str:
+        """Return formated rank, winrate data for a champion"""
         def format(rank, winrate) -> str:
             return "Rank: {}\nWinrate: {}".format(rank, winrate)
-        if id in self.__winrates_by_key:
-            return format(*self.__winrates_by_key[id])
-        fallback = int(str(id).split(".")[0])
-        if fallback in self.__winrates_by_key:
-            return format(*self.__winrates_by_key[fallback])
+        if id in self.__winrates_by_champ:
+            return format(*self.__winrates_by_champ[champ])
+        fallback = champ.strip().lower().replace(" ", "").replace("\'", "")
+        if fallback in self.__winrates_by_champ:
+            return format(*self.__winrates_by_champ[fallback])
         return ""
+
+if __name__ == "__main__":
+    api = LoLalytics()
