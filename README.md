@@ -17,54 +17,47 @@ surprises before the match begins! :3
 - [License](#license)
 
 # Download
-Interested in using Monsoon? [Get it here!](https://github.com/MissUwuieTime/monsoon/releases) :hype_kitty:
+Interested in using Monsoon? Download the releases from this fork:
+[Get it here!](https://github.com/CharlesW1/monsoon/releases) :hype_kitty:
 
 # Guide
 ## Getting started
-When launching Monsoon, the application will idle while waiting for an ARAM 
-champion select to be created. It is recommended to have Monsoon ready before 
-queuing up as the overlay may fail to appear otherwise.
+<TODO Showcase section>
 
-![overlay_example](https://user-images.githubusercontent.com/87099578/194787986-54506673-fda7-4ee3-a0a0-9c8b72dcd4f9.png)
+## Quick start (from source code)
 
-Hovering over the information emoji ℹ️ will bring up a tooltip with detailed 
-balance changes of a champion if applicable. This emoji will only appear if 
-there are any ARAM balance changes to a champion and has other changes made 
-(healing/shielding modifiers, mechanic changes, etc). 
+If you'd like to run Monsoon from source, a helper script is included to set up a
+Python virtual environment, install dependencies and optionally run the app.
 
-This emoji will always appear for bench champions if they have any balance 
-changes.
+- Just navigate to the script directory, make the script executable (on Unix-like shells), and run it:
 
-![system_tray](https://user-images.githubusercontent.com/87099578/194152388-7e6307e1-b7e6-4d65-8cd5-1df46a5d45bb.png)
+```bash
+cd ./scripts
+chmod +x ./quick_start.sh
+./quick_start.sh
+```
 
+- On Windows PowerShell or cmd, follow the printed activation instructions from
+  the script, or run the setup steps manually:
 
-Monsoon will also leave a icon in your system tray. This icon can be clicked to 
-reveal actions you can perform such as exiting Monsoon.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1   # PowerShell
+# or: .\.venv\Scripts\activate.bat  # cmd.exe
+pip install -r .\requirements.txt
+python .\src\monsoon.py
+```
 
-# Limitations
-Monsoon was created with the goal of just being an overlay for the League 
-client. Therefore, Monsoon will not support the in-game League window/fullscreen.
-
-Due to Monsoon depending on the LoL Fandom for upstream balance changes, said 
-balance changes may not be 100% accurate. This may be the most noticable when 
-new ARAM balance changes are announced (Wikia editors may update ahead of time) 
-or when the upstream may fail to update due to lack of upkeep.
-
-Monsoon may not work with multiple League clients open at the same time 
-(sorries but that is just too weird for me to support). >.<
+Notes:
+- The helper prefers a `.venv` directory and will use an existing `.venv` or
+  `env` if present
+- The script checks for Python >= 3.10. If you don't have a suitable Python
+  installed it will print instructions on where to get one
 
 # FAQ
 **How was Monsoon made?**
 
-Monsoon's initial codebase was developed using Python in the span of four days. 
-Notable packages include:
-- PySide6 
-(binding of the Qt GUI toolkit)
-- willump (League Client connector)
-- pywin32 
-(makes overlay possible)
-- beautifulsoup4 (parsing balance changes)
-- dependency-injector (dependency injection system)
+I forked this repo from BlossomiShymae and added in winrate data from LoLalytics.
 
 **Does Monsoon support Mac (or even Linux with Wine)?**
 
