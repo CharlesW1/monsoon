@@ -21,7 +21,9 @@ class BalanceLever:
     def format(self) -> str:
         """Return a formatted string of a balance lever. ("Dmg Dealt: -20%")
 
-    Returns:
-        str: Formatted string reperesentation of a balance lever.
-    """
+        Returns:
+            str: Formatted string reperesentation of a balance lever.
+        """
+        if self.name == "ability_haste":
+            return f"{self._format_name()}: {self.modifier}"
         return f"{self._format_name()}: {self._format_modifier()}%"

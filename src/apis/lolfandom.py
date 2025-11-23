@@ -9,11 +9,17 @@ from .lolalytics import LoLalytics
 
 class LolFandom:
     def __init__(self):
-        self.url = "https://leagueoflegends.fandom.com"
+        # self.old_url = "https://leagueoflegends.fandom.com/wiki/Module:ChampionData/data"
+        self.url = "https://wiki.leagueoflegends.com/en-us/Module:ChampionData/data"
         # Upstream; parses from Lua data module
         self.__championdata_module = self._fetch_championdata_module()
         self.__LoLalytics = LoLalytics()
         self.__dynamic_balances_by_key = self._process_championdata_module()
+
+        print(f"Processed {len(self.__dynamic_balances_by_key)} champions from LoL Fandom Module:ChampionData")
+        # DEBUG: print processed dynamic balances items
+        # for key, value in sorted(self.__dynamic_balances_by_key.items()):
+        #     print(f"- {key}: {value.format_balance_levers()}")
 
     def fetch_dynamic_balance_by_champion_name(self, name) -> DynamicBalanceModel:
         """Finds a DynamicBalanceModel instance for a champion name. May return None
@@ -40,7 +46,7 @@ class LolFandom:
     Returns:
         str: Raw Lua code which itself returns table of champion statistics.
     """
-        req = requests.get(f"{self.url}/wiki/Module:ChampionData/data")
+        req = requests.get(f"{self.url}")
 
         if req.status_code != 200:
             raise Exception("Failed to get Module:ChampionData from LoL Fandom")
@@ -99,8 +105,10 @@ class LolFandom:
             balance_items = list(aram_stats.items())
             balance_levers = []
             for balance_tuple in balance_items:
+                # skip default modifier of 1 (no change)
+                if balance_tuple[1] == 1:
+                    continue
                 balance_levers.append(BalanceLever(balance_tuple[0], balance_tuple[1]))
-            # Insert new model into dictionary
             dynamic_balances.update({champion_name: DynamicBalanceModel(
                 champion_id=champion_id,
                 rank_winrate=rank_winrate,
