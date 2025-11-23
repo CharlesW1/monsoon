@@ -1,2 +1,2 @@
 from .datadragon import *
-from .lolfandom import *
+from .lolwiki import *

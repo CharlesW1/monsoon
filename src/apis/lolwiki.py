@@ -7,7 +7,7 @@ from models import DynamicBalanceModel, BalanceLever
 from .lolalytics import LoLalytics
 
 
-class LolFandom:
+class LolWiki:
     def __init__(self):
         # self.old_url = "https://leagueoflegends.fandom.com/wiki/Module:ChampionData/data"
         self.url = "https://wiki.leagueoflegends.com/en-us/Module:ChampionData/data"
