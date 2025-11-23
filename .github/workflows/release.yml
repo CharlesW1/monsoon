@@ -25,14 +25,7 @@ jobs:
       - name: Extract version from constants.py
         id: get_version
         run: |
-          VERSION=$(python - <<'PY'
-import re
-text=open('src/constants.py').read()
-m=re.search(r'VERSION\s*=\s*[\"\']([^\"\']+)[\"\']', text)
-if not m:
-    raise SystemExit('VERSION not found')
-print(m.group(1))
-PY
+          VERSION=$(awk -F\" '/VERSION/ {print $2; exit}' src/constants.py)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         shell: bash
 
