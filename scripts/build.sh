@@ -20,11 +20,13 @@ setup_executable_names() {
 build() {
     pyinstaller src/monsoon.py --add-data "resources/images/*;resources/images" \
     --onefile --hidden-import "win32api" --hidden-import "dependency_injector.errors" \
-    --hidden-import "six" --icon "monsoon.ico" -n "$debug_exe_name"
+    --hidden-import "six" --hidden-import "configparser" --hidden-import "ConfigParser" \
+    --icon "monsoon.ico" -n "$debug_exe_name"
     
     pyinstaller src/monsoon.py --add-data "resources/images/*;resources/images" \
     --onefile --noconsole --hidden-import "win32api" \
     --hidden-import "dependency_injector.errors" --hidden-import "six" \
+    --hidden-import "configparser" --hidden-import "ConfigParser" \
     --icon "monsoon.ico" -n "$exe_name"
 }
 
@@ -33,4 +35,5 @@ setup_executable_names
 build
 
 # Archive and compress source code
+mkdir -p dist
 git archive -o dist/latest.zip HEAD
