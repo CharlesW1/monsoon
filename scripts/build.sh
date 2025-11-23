@@ -21,13 +21,13 @@ build() {
     pyinstaller src/monsoon.py --add-data "resources/images/*;resources/images" \
     --onefile --hidden-import "win32api" --hidden-import "dependency_injector.errors" \
     --hidden-import "six" --hidden-import "configparser" --hidden-import "ConfigParser" \
-    --icon "monsoon.ico" -n "$debug_exe_name"
+    --icon "resources/images/monsoon.ico" -n "$debug_exe_name"
     
     pyinstaller src/monsoon.py --add-data "resources/images/*;resources/images" \
     --onefile --noconsole --hidden-import "win32api" \
     --hidden-import "dependency_injector.errors" --hidden-import "six" \
     --hidden-import "configparser" --hidden-import "ConfigParser" \
-    --icon "monsoon.ico" -n "$exe_name"
+    --icon "resources/images/monsoon.ico" -n "$exe_name"
 }
 
 parse_version
