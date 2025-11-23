@@ -11,6 +11,11 @@ class LoLalytics:
         self.__champs, self.__champsData = self._fetch_winrate_json()
         self.__winrates_by_champ = self._process_winrate_data()
 
+        print(f"Processed winrates for {len(self.__winrates_by_champ)} champions from LoLalytics")
+        # DEBUG: print processed winrates
+        # for key, value in sorted(self.__winrates_by_champ.items()):
+        #     print(f"- {key}: {value}")
+
     def _fetch_winrate_json(self) -> tuple[list, list]:
         """Fetch the json from lolalytics.com that contains ARAM win rates for each
         champion over that past 14 days from the emerald+ elo. 
@@ -27,6 +32,7 @@ class LoLalytics:
         Returns:
             dict: dict representation of the json returned
         """
+        # fetch page containing tierlist data
         response = requests.get(self.url)
 
         if response.status_code != 200:
@@ -78,6 +84,8 @@ class LoLalytics:
 
     def _fetch_winrate_for_champ(self, champ) -> float:
         """Visit champion page directly and grab winrate info"""
+        print(f"Fetching winrate for missing champion {champ} from LoLalytics")
+
         response = requests.get(self.champ_url.format(champ))
 
         if response.status_code != 200:
@@ -107,24 +115,24 @@ class LoLalytics:
         winrates = {}
         wrById = {}
         for champ, data in zip(champs, champsData):
-            '''data is a list of
-            [rank, winrate, wr delta, pick rate, games, some id dict]
-            note they can be missing entries because the website is fun :X
+            '''data list is how lolalytics represents the winrate data.
+            It is obfuscated, but is a list of attributes in this order (all values not always present):
+                [rank, winrate, wr delta, pick rate, games, some id dict]
             # one reason is that they don't show the same wr twice so one champion will be missing
             '''
             # first slot is wr as decimal
-            if isinstance(data[0], float) and 38 < data[0] and data[0] < 62:
+            if isinstance(data[0], float) and 38 < data[0] and data[0] < 67:
                 winrates[champ] = data[0]
                 wrById[data[-1]['wr']] = (data[0], champ)
                 continue
             # second slot is wr as decimal
-            if isinstance(data[1], float) and 38 < data[1] and data[1] < 62:
+            if isinstance(data[1], float) and 38 < data[1] and data[1] < 67:
                 winrates[champ] = data[1]
                 wrById[data[-1]['wr']] = (data[1], champ)
                 continue
 
             # wr happens to be int first slot (check next slot is delta/pr)
-            if (isinstance(data[0], int) and 38 < data[0] and data[0] < 62 and
+            if (isinstance(data[0], int) and 38 < data[0] and data[0] < 67 and
                 isinstance(data[1], float) and data[1] < 10):
                 winrates[champ] = data[0]
                 wrById[data[-1]['wr']] = (data[0], champ)
@@ -157,9 +165,18 @@ class LoLalytics:
             return "Rank: {}\nWinrate: {}".format(rank, winrate)
         if id in self.__winrates_by_champ:
             return format(*self.__winrates_by_champ[champ])
+
+        # try fallback formatting by first normalizing the champion name
         fallback = champ.strip().lower().replace(" ", "").replace("\'", "").replace(".", "")
         if fallback in self.__winrates_by_champ:
             return format(*self.__winrates_by_champ[fallback])
+
+        # try second fallback by using first part of champ name (for champs like Renata Glasc, Nunu & Willump, etc)
+        second_fallback = champ.split()[0].strip().lower()
+        if second_fallback in self.__winrates_by_champ:
+            return format(*self.__winrates_by_champ[second_fallback])
+
+        print(f"Warning: could not find winrate for champion '{champ}'")
         return ""
 
 if __name__ == "__main__":
