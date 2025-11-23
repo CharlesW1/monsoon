@@ -50,7 +50,7 @@ jobs:
 
       - name: Build executables
         run: |
-          .\scripts\build.sh
+          ./scripts/build.sh
         shell: bash
 
       - name: Collect artifacts
