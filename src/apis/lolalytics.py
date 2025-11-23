@@ -157,7 +157,7 @@ class LoLalytics:
             return "Rank: {}\nWinrate: {}".format(rank, winrate)
         if id in self.__winrates_by_champ:
             return format(*self.__winrates_by_champ[champ])
-        fallback = champ.strip().lower().replace(" ", "").replace("\'", "")
+        fallback = champ.strip().lower().replace(" ", "").replace("\'", "").replace(".", "")
         if fallback in self.__winrates_by_champ:
             return format(*self.__winrates_by_champ[fallback])
         return ""
