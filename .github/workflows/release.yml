@@ -1,0 +1,76 @@
+name: Build and publish release from constants.py
+
+on:
+  push:
+    paths:
+      - 'src/constants.py'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Extract version from constants.py
+        id: get_version
+        run: |
+          VERSION=$(python - <<'PY'
+import re
+text=open('src/constants.py').read()
+m=re.search(r'VERSION\s*=\s*[\"\']([^\"\']+)[\"\']', text)
+if not m:
+    raise SystemExit('VERSION not found')
+print(m.group(1))
+PY
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Create and push tag if missing
+        run: |
+          TAG="v${{ steps.get_version.outputs.version }}"
+          echo "Tag will be: $TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse --verify "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+          else
+            git tag -a "$TAG" -m "Release $TAG"
+            git push "https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$TAG"
+          fi
+        shell: bash
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executables
+        run: |
+          .\scripts\build.sh
+        shell: bash
+
+      - name: Collect artifacts
+        run: |
+          New-Item -ItemType Directory -Path publish -Force | Out-Null
+          Copy-Item -Path dist\monsoon-debug-console-* -Destination publish -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item -Path dist\monsoon-* -Destination publish -Recurse -Force -ErrorAction SilentlyContinue
+        shell: pwsh
+
+      - name: Create GitHub release and upload assets
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          files: publish/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
