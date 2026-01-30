@@ -16,6 +16,8 @@ class LoLalytics:
         # for key, value in sorted(self.__winrates_by_champ.items()):
         #     print(f"- {key}: {value}")
 
+    # ...existing code... (retry helper intentionally removed to keep network calls simple)
+
     def _fetch_winrate_json(self) -> tuple[list, list]:
         """Fetch the json from lolalytics.com that contains ARAM win rates for each
         champion over that past 14 days from the emerald+ elo. 
@@ -35,9 +37,11 @@ class LoLalytics:
         # fetch page containing tierlist data
         response = requests.get(self.url)
 
+        print(response.status_code)
+
         if response.status_code != 200:
             raise Exception("LoLalytics did not respond 200")
-        
+
         try:
             soup = BeautifulSoup(response.text, "html.parser")
             div = soup.find('div', class_='ml-auto text-right')
@@ -85,12 +89,13 @@ class LoLalytics:
     def _fetch_winrate_for_champ(self, champ) -> float:
         """Visit champion page directly and grab winrate info"""
         print(f"Fetching winrate for missing champion {champ} from LoLalytics")
-
         response = requests.get(self.champ_url.format(champ))
+
+        print(response.status_code)
 
         if response.status_code != 200:
             raise Exception("LoLalytics did not respond 200")
-        
+
         try:
             soup = BeautifulSoup(response.text, "html.parser")
             # Find the specific <p> tag with the given class
@@ -120,11 +125,18 @@ class LoLalytics:
                 [rank, winrate, wr delta, pick rate, games, some id dict]
             # one reason is that they don't show the same wr twice so one champion will be missing
             '''
+
+            if len(data) < 1:
+                continue
             # first slot is wr as decimal
             if isinstance(data[0], float) and 38 < data[0] and data[0] < 67:
                 winrates[champ] = data[0]
                 wrById[data[-1]['wr']] = (data[0], champ)
                 continue
+
+            if len(data) < 2:
+                continue
+
             # second slot is wr as decimal
             if isinstance(data[1], float) and 38 < data[1] and data[1] < 67:
                 winrates[champ] = data[1]
@@ -163,7 +175,7 @@ class LoLalytics:
         """Return formated rank, winrate data for a champion"""
         def format(rank, winrate) -> str:
             return "Rank: {}\nWinrate: {}".format(rank, winrate)
-        if id in self.__winrates_by_champ:
+        if champ in self.__winrates_by_champ:
             return format(*self.__winrates_by_champ[champ])
 
         # try fallback formatting by first normalizing the champion name
