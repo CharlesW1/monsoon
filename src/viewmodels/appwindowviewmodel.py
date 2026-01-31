@@ -82,8 +82,10 @@ class AppWindowViewModel(object):
             balance.champion_icon = self.api_service.data_dragon.fetch_icon_by_champion_id(id)
             available_champion_dynamic_balances.append(balance)
 
-        self.team_champion_dynamic_balances = team_champion_dynamic_balances
-        self.available_champion_dynamic_balances = available_champion_dynamic_balances
+        if team_champion_dynamic_balances:
+            self.team_champion_dynamic_balances = team_champion_dynamic_balances
+        if available_champion_dynamic_balances:
+            self.available_champion_dynamic_balances = available_champion_dynamic_balances
 
     @property
     def available_champion_dynamic_balances(self):
