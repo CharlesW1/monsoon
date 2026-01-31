@@ -43,16 +43,42 @@ class AppWindowViewModel(object):
 
     @QtCore.Slot(ChampionSelectSessionModel)
     def on_data(self, data: ChampionSelectSessionModel):
+        if data is None:
+            print("Warning: received None data in on_data")
+            return
+
         team_champion_dynamic_balances = []
-        for id in data.team_champion_ids:
+        team_ids = data.team_champion_ids or []
+        for id in team_ids:
             champion = self.api_service.data_dragon.fetch_by_champion_id(id)
-            balance = self.api_service.lol_fandom.fetch_dynamic_balance_by_champion_name(champion["name"])
+            if champion is None:
+                print(f"Warning: could not resolve champion for id {id} (team)")
+                continue
+            champ_name = champion.get("name")
+            if not champ_name:
+                print(f"Warning: champion data missing name for id {id} (team)")
+                continue
+            balance = self.api_service.lol_wiki.fetch_dynamic_balance_by_champion_name(champ_name)
+            if balance is None:
+                print(f"Warning: lol_wiki returned no balance for '{champ_name}' (team)")
+                continue
             balance.champion_icon = self.api_service.data_dragon.fetch_icon_by_champion_id(id)
             team_champion_dynamic_balances.append(balance)
         available_champion_dynamic_balances = []
-        for id in data.available_champion_ids:
+        avail_ids = data.available_champion_ids or []
+        for id in avail_ids:
             champion = self.api_service.data_dragon.fetch_by_champion_id(id)
-            balance = self.api_service.lol_fandom.fetch_dynamic_balance_by_champion_name(champion["name"])
+            if champion is None:
+                print(f"Warning: could not resolve champion for id {id} (available)")
+                continue
+            champ_name = champion.get("name")
+            if not champ_name:
+                print(f"Warning: champion data missing name for id {id} (available)")
+                continue
+            balance = self.api_service.lol_wiki.fetch_dynamic_balance_by_champion_name(champ_name)
+            if balance is None:
+                print(f"Warning: lol_wiki returned no balance for '{champ_name}' (available)")
+                continue
             balance.champion_icon = self.api_service.data_dragon.fetch_icon_by_champion_id(id)
             available_champion_dynamic_balances.append(balance)
 
