@@ -1,13 +1,12 @@
 name: Build and publish release from constants.py
 
 on:
-  push:
-    paths:
-      - 'src/constants.py'
+  push: {}
   workflow_dispatch:
 
 jobs:
   build-and-release:
+    if: "!contains(github.event.head_commit.message, '[skip release]')"
     runs-on: windows-latest
     permissions:
       contents: write
@@ -29,9 +28,35 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         shell: bash
 
+      - name: Bump patch version and push
+        id: bump_version
+        run: |
+          set -e
+          # read current version
+          VERSION=${{ steps.get_version.outputs.version }}
+          echo "Current version: $VERSION"
+          IFS='.' read -r MAJ MIN PAT <<< "$VERSION"
+          PAT=$((PAT + 1))
+          NEW_VERSION="$MAJ.$MIN.$PAT"
+          echo "New version: $NEW_VERSION"
+
+          # update src/constants.py
+          awk -v v="$NEW_VERSION" 'BEGIN{FS="\""} /VERSION/ { $2=v } { print }' src/constants.py > src/constants.py.new
+          mv src/constants.py.new src/constants.py
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/constants.py
+          git commit -m "Bump version to $NEW_VERSION [skip release]" || echo "No changes to commit"
+          git push "https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:refs/heads/${{ github.ref_name }}
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Create and push tag if missing
         run: |
-          TAG="v${{ steps.get_version.outputs.version }}"
+          VERSION_TO_TAG=${{ steps.bump_version.outputs.new_version }}
+          TAG="v${VERSION_TO_TAG}"
           echo "Tag will be: $TAG"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -63,7 +88,7 @@ jobs:
       - name: Create GitHub release and upload assets
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.get_version.outputs.version }}
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
           files: publish/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
