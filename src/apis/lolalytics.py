@@ -8,6 +8,8 @@ class LoLalytics:
     def __init__(self):
         self.url = "https://lolalytics.com/lol/tierlist/aram/?patch=14"
         self.champ_url = "https://lolalytics.com/lol/{}/aram/build/?patch=14"
+        # Reuse TCP connections
+        self.session = requests.Session()
         self.__champs, self.__champsData = self._fetch_winrate_json()
         self.__winrates_by_champ = self._process_winrate_data()
 
@@ -35,7 +37,7 @@ class LoLalytics:
             dict: dict representation of the json returned
         """
         # fetch page containing tierlist data
-        response = requests.get(self.url)
+        response = self.session.get(self.url)
 
         print(response.status_code)
 
@@ -89,7 +91,7 @@ class LoLalytics:
     def _fetch_winrate_for_champ(self, champ) -> float:
         """Visit champion page directly and grab winrate info"""
         print(f"Fetching winrate for missing champion {champ} from LoLalytics")
-        response = requests.get(self.champ_url.format(champ))
+        response = self.session.get(self.champ_url.format(champ))
 
         print(response.status_code)
 
@@ -171,22 +173,24 @@ class LoLalytics:
             winrates[x[1]] = (rank, winrates[x[1]])
         return winrates
 
+    @staticmethod
+    def _format_rank_winrate(rank, winrate) -> str:
+        return "Rank: {}\nWinrate: {}".format(rank, winrate)
+
     def fetch_winrate_by_champion(self, champ) -> str:
         """Return formated rank, winrate data for a champion"""
-        def format(rank, winrate) -> str:
-            return "Rank: {}\nWinrate: {}".format(rank, winrate)
         if champ in self.__winrates_by_champ:
-            return format(*self.__winrates_by_champ[champ])
+            return self._format_rank_winrate(*self.__winrates_by_champ[champ])
 
         # try fallback formatting by first normalizing the champion name
         fallback = champ.strip().lower().replace(" ", "").replace("\'", "").replace(".", "")
         if fallback in self.__winrates_by_champ:
-            return format(*self.__winrates_by_champ[fallback])
+            return self._format_rank_winrate(*self.__winrates_by_champ[fallback])
 
-        # try second fallback by using first part of champ name (for champs like Renata Glasc, Nunu & Willump, etc)
+        # try second fallback by using first part of champion name (for champs like Renata Glasc, Nunu & Willump, etc)
         second_fallback = champ.split()[0].strip().lower()
         if second_fallback in self.__winrates_by_champ:
-            return format(*self.__winrates_by_champ[second_fallback])
+            return self._format_rank_winrate(*self.__winrates_by_champ[second_fallback])
 
         print(f"Warning: could not find winrate for champion '{champ}'")
         return ""
