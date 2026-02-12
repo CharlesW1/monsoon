@@ -9,6 +9,7 @@ from .lolalytics import LoLalytics
 
 class LolWiki:
     def __init__(self):
+        self.session = requests.Session()
         # self.old_url = "https://leagueoflegends.fandom.com/wiki/Module:ChampionData/data"
         self.url = "https://wiki.leagueoflegends.com/en-us/Module:ChampionData/data"
         # Upstream; parses from Lua data module
@@ -46,7 +47,7 @@ class LolWiki:
     Returns:
         str: Raw Lua code which itself returns table of champion statistics.
     """
-        req = requests.get(f"{self.url}")
+        req = self.session.get(f"{self.url}")
 
         if req.status_code != 200:
             raise Exception("Failed to get Module:ChampionData from LoL Fandom")
