@@ -8,6 +8,8 @@ class LoLalytics:
     def __init__(self):
         self.url = "https://lolalytics.com/lol/tierlist/aram/?patch=14"
         self.champ_url = "https://lolalytics.com/lol/{}/aram/build/?patch=14"
+        # API client classes must use requests.Session() to enable TCP connection pooling
+        self.session = requests.Session()
         self.__champs, self.__champsData = self._fetch_winrate_json()
         self.__winrates_by_champ = self._process_winrate_data()
 
@@ -35,7 +37,7 @@ class LoLalytics:
             dict: dict representation of the json returned
         """
         # fetch page containing tierlist data
-        response = requests.get(self.url)
+        response = self.session.get(self.url)
 
         print(response.status_code)
 
@@ -89,7 +91,7 @@ class LoLalytics:
     def _fetch_winrate_for_champ(self, champ) -> float:
         """Visit champion page directly and grab winrate info"""
         print(f"Fetching winrate for missing champion {champ} from LoLalytics")
-        response = requests.get(self.champ_url.format(champ))
+        response = self.session.get(self.champ_url.format(champ))
 
         print(response.status_code)
 

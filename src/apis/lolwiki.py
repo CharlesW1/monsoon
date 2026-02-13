@@ -11,6 +11,8 @@ class LolWiki:
     def __init__(self):
         # self.old_url = "https://leagueoflegends.fandom.com/wiki/Module:ChampionData/data"
         self.url = "https://wiki.leagueoflegends.com/en-us/Module:ChampionData/data"
+        # API client classes must use requests.Session() to enable TCP connection pooling
+        self.session = requests.Session()
         # Upstream; parses from Lua data module
         self.__championdata_module = self._fetch_championdata_module()
         self.__LoLalytics = LoLalytics()
@@ -46,7 +48,7 @@ class LolWiki:
     Returns:
         str: Raw Lua code which itself returns table of champion statistics.
     """
-        req = requests.get(f"{self.url}")
+        req = self.session.get(f"{self.url}")
 
         if req.status_code != 200:
             raise Exception("Failed to get Module:ChampionData from LoL Fandom")
