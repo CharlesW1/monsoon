@@ -1,7 +1,8 @@
 name: Build and publish release from constants.py
 
 on:
-  push: {}
+  push:
+    branches: [main, monsoon2.0]
   workflow_dispatch:
 
 jobs:
@@ -15,34 +16,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Extract version from constants.py
-        id: get_version
-        run: |
-          VERSION=$(awk -F\" '/VERSION/ {print $2; exit}' src/constants.py)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-        shell: bash
-
       - name: Bump patch version and push
         id: bump_version
         run: |
           set -e
-          # read current version
-          VERSION=${{ steps.get_version.outputs.version }}
+          # Extract version from constants.py
+          VERSION=$(grep -oE "[0-9]+\.[0-9]+\.[0-9]+" src/constants.py | head -1)
           echo "Current version: $VERSION"
+
+          # Bump patch version
           IFS='.' read -r MAJ MIN PAT <<< "$VERSION"
           PAT=$((PAT + 1))
           NEW_VERSION="$MAJ.$MIN.$PAT"
           echo "New version: $NEW_VERSION"
 
           # update src/constants.py
-          awk -v v="$NEW_VERSION" 'BEGIN{FS="\""} /VERSION/ { $2=v } { print }' src/constants.py > src/constants.py.new
-          mv src/constants.py.new src/constants.py
+          sed -i "s/VERSION =.*/VERSION = \"$NEW_VERSION\"/" src/constants.py
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
