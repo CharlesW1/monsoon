@@ -7,7 +7,7 @@ debug_exe_name="monsoon-debug-console"
 
 # Parse canonical version from Python source file
 parse_version() {
-    version=$(awk '/VERSION/' ./src/constants.py | cut -d '"' -f2)
+    version=$(grep -oE "[0-9]+\.[0-9]+\.[0-9]+" ./src/constants.py | head -1)
 }
 
 # Setup names for the distributed executables
