@@ -11,7 +11,10 @@ class LoLalytics:
         # Reuse TCP connections
         self.session = requests.Session()
         self.__champs, self.__champsData = self._fetch_winrate_json()
+        # Initial raw data processing
         self.__winrates_by_champ = self._process_winrate_data()
+        # O(1) pre-formatted lookup map for all champion name variants
+        self.__lookup_map = self._build_lookup_map()
 
         print(f"Processed winrates for {len(self.__winrates_by_champ)} champions from LoLalytics")
         # DEBUG: print processed winrates
@@ -131,7 +134,7 @@ class LoLalytics:
             if len(data) < 1:
                 continue
             # first slot is wr as decimal
-            if isinstance(data[0], float) and 38 < data[0] and data[0] < 67:
+            if isinstance(data[0], (int, float)) and 38 < data[0] and data[0] < 67:
                 winrates[champ] = data[0]
                 wrById[data[-1]['wr']] = (data[0], champ)
                 continue
@@ -140,7 +143,7 @@ class LoLalytics:
                 continue
 
             # second slot is wr as decimal
-            if isinstance(data[1], float) and 38 < data[1] and data[1] < 67:
+            if isinstance(data[1], (int, float)) and 38 < data[1] and data[1] < 67:
                 winrates[champ] = data[1]
                 wrById[data[-1]['wr']] = (data[1], champ)
                 continue
@@ -177,20 +180,38 @@ class LoLalytics:
     def _format_rank_winrate(rank, winrate) -> str:
         return "Rank: {}\nWinrate: {}".format(rank, winrate)
 
+    def _normalize_name(self, name: str) -> str:
+        """Standardize champion name for consistent lookups"""
+        return name.strip().lower().replace(" ", "").replace("\'", "").replace(".", "")
+
+    def _build_lookup_map(self) -> dict:
+        """Pre-format and index winrate data by both original and normalized names"""
+        lookup = {}
+        for name, data in self.__winrates_by_champ.items():
+            formatted = self._format_rank_winrate(*data)
+            # Store by original name
+            lookup[name] = formatted
+            # Store by normalized name for faster fallback lookups
+            normalized = self._normalize_name(name)
+            if normalized not in lookup:
+                lookup[normalized] = formatted
+        return lookup
+
     def fetch_winrate_by_champion(self, champ) -> str:
-        """Return formated rank, winrate data for a champion"""
-        if champ in self.__winrates_by_champ:
-            return self._format_rank_winrate(*self.__winrates_by_champ[champ])
+        """Return formated rank, winrate data for a champion using O(1) lookup map"""
+        # 1. Direct O(1) lookup (exact or previously normalized name)
+        if champ in self.__lookup_map:
+            return self.__lookup_map[champ]
 
-        # try fallback formatting by first normalizing the champion name
-        fallback = champ.strip().lower().replace(" ", "").replace("\'", "").replace(".", "")
-        if fallback in self.__winrates_by_champ:
-            return self._format_rank_winrate(*self.__winrates_by_champ[fallback])
+        # 2. Try lookup with current name normalized
+        normalized = self._normalize_name(champ)
+        if normalized in self.__lookup_map:
+            return self.__lookup_map[normalized]
 
-        # try second fallback by using first part of champion name (for champs like Renata Glasc, Nunu & Willump, etc)
-        second_fallback = champ.split()[0].strip().lower()
-        if second_fallback in self.__winrates_by_champ:
-            return self._format_rank_winrate(*self.__winrates_by_champ[second_fallback])
+        # 3. Final fallback: first part of name (e.g. "Renata Glasc" -> "renata")
+        first_part = champ.split()[0].strip().lower()
+        if first_part in self.__lookup_map:
+            return self.__lookup_map[first_part]
 
         print(f"Warning: could not find winrate for champion '{champ}'")
         return ""
