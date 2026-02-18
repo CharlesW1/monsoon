@@ -94,23 +94,20 @@ class LolWiki:
         if lupa.lua_type(table) != "table":
             raise Exception("Failed to evaluate Module:ChampionData, stopping as security precaution")
 
-        # Transform into list of (key, value) tuples
-        items = list(table.items())
-        dynamic_balances = {}
         # Create dynamic balance model data for each champion
-        for kv_tuple in items:
-            champion_id = kv_tuple[1]["id"]
-            champion_name = kv_tuple[0]
+        dynamic_balances = {}
+        # Iterate directly over Lua table items to avoid unnecessary list allocations
+        for champion_name, champion_data in table.items():
+            champion_id = champion_data["id"]
             rank_winrate = self.__LoLalytics.fetch_winrate_by_champion(champion_name)
-            aram_stats = kv_tuple[1]["stats"]["aram"] or {}
-    
-            balance_items = list(aram_stats.items())
+            aram_stats = champion_data["stats"]["aram"] or {}
+
             balance_levers = []
-            for balance_tuple in balance_items:
+            for stat_name, modifier in aram_stats.items():
                 # skip default modifier of 1 (no change)
-                if balance_tuple[1] == 1:
+                if modifier == 1:
                     continue
-                balance_levers.append(BalanceLever(balance_tuple[0], balance_tuple[1]))
+                balance_levers.append(BalanceLever(stat_name, modifier))
             dynamic_balances.update({champion_name: DynamicBalanceModel(
                 champion_id=champion_id,
                 rank_winrate=rank_winrate,
