@@ -1,6 +1,7 @@
 import requests
 import json
 import re
+import concurrent.futures
 from bs4 import BeautifulSoup
 
 
@@ -166,9 +167,18 @@ class LoLalytics:
             missingInfo.add(champ)
 
         # remaining champs seem to have integer wr that is just missing
-        # fetch directly from their champ page
-        for champ in missingInfo:
-            winrates[champ] = self._fetch_winrate_for_champ(champ)
+        # fetch directly from their champ page in parallel to save time
+        if missingInfo:
+            # Use a limited number of workers to avoid being rate-limited by the host
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                future_to_champ = {executor.submit(self._fetch_winrate_for_champ, champ): champ for champ in missingInfo}
+                for future in concurrent.futures.as_completed(future_to_champ):
+                    champ = future_to_champ[future]
+                    try:
+                        winrates[champ] = future.result()
+                    except Exception as e:
+                        print(f"Error fetching winrate for {champ}: {e}")
+                        winrates[champ] = -1
 
         wrSorted = sorted([(-wr, champ) for champ, wr in winrates.items()])
 
