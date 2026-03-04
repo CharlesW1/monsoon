@@ -102,17 +102,17 @@ class LolWiki:
             rank_winrate = self.__LoLalytics.fetch_winrate_by_champion(champion_name)
             aram_stats = champion_data["stats"]["aram"] or {}
 
-            balance_levers = []
-            for stat_name, modifier in aram_stats.items():
-                # skip default modifier of 1 (no change)
-                if modifier == 1:
-                    continue
-                balance_levers.append(BalanceLever(stat_name, modifier))
-            dynamic_balances.update({champion_name: DynamicBalanceModel(
+            # Use list comprehension for better efficiency and readability
+            balance_levers = [
+                BalanceLever(stat_name, modifier)
+                for stat_name, modifier in aram_stats.items()
+                if modifier != 1
+            ]
+            dynamic_balances[champion_name] = DynamicBalanceModel(
                 champion_id=champion_id,
                 rank_winrate=rank_winrate,
                 champion_name=champion_name,
                 balance_levers=balance_levers
-            )})
+            )
 
         return dynamic_balances
