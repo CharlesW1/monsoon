@@ -13,8 +13,7 @@ class ApiService:
     def __init__(
             self
     ):
-        # Parallelize the initialization of DataDragon and LolWiki to speed up app startup.
-        # Both are network-bound as they fetch data from their respective APIs.
+        # Parallelize initialization of separate network-bound APIs to speed up app startup.
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             future_dd = executor.submit(DataDragon)
             future_wiki = executor.submit(LolWiki)
