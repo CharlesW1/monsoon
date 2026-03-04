@@ -5,3 +5,7 @@
 ## 2025-02-12 - Data Parsing & Initialization
 **Learning:** Inconsistent data types in API responses (e.g., winrates appearing as both `int` and `float`) can cause parsing logic to fail silently, leading to redundant fallback network requests.
 **Action:** Ensure parsing logic is robust to common type variations (using `isinstance(val, (int, float))`) to avoid expensive network-based fallbacks.
+
+## 2025-05-14 - Parallel I/O & Initialization
+**Learning:** Parallelizing independent I/O-bound initialization tasks (like multiple API clients) and concurrent network requests for missing data significantly reduces total startup time. Overlapping `DataDragon` and `LolWiki` initialization reduced startup by ~47%.
+**Action:** Use `concurrent.futures.ThreadPoolExecutor` for independent service initialization and for parallelizing groups of network requests.
