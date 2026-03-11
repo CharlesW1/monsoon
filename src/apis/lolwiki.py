@@ -1,5 +1,6 @@
 import lupa
 import requests
+import concurrent.futures
 from bs4 import BeautifulSoup
 from lupa import LuaRuntime
 
@@ -13,9 +14,16 @@ class LolWiki:
         self.url = "https://wiki.leagueoflegends.com/en-us/Module:ChampionData/data"
         # Reuse TCP connections
         self.session = requests.Session()
-        # Upstream; parses from Lua data module
-        self.__championdata_module = self._fetch_championdata_module()
-        self.__LoLalytics = LoLalytics()
+
+        # Parallelize independent network-bound tasks: fetching wiki data and initializing LoLalytics
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_module = executor.submit(self._fetch_championdata_module)
+            future_lolalytics = executor.submit(LoLalytics)
+
+            # Upstream; parses from Lua data module
+            self.__championdata_module = future_module.result()
+            self.__LoLalytics = future_lolalytics.result()
+
         self.__dynamic_balances_by_key = self._process_championdata_module()
 
         print(f"Processed {len(self.__dynamic_balances_by_key)} champions from LoL Fandom Module:ChampionData")
