@@ -43,10 +43,13 @@ class DataDragon:
 
         champion_name = champion['id']
 
+        # Check local cache first (dict operations are thread-safe in CPython)
         if champion_name not in self.champion_icons:
             req = self.session.get(f"{self.url}/cdn/{self.latest_version}/img/champion/{champion_name}.png")
             if req.status_code != 200:
                 raise Exception("Failed to get champion icon from DataDragon")
+            # Multiple threads might fetch the same icon if they hit this simultaneously,
+            # but they will all result in the same content, so a race condition here is harmless.
             self.champion_icons[champion_name] = req.content
 
         return self.champion_icons[champion_name]
