@@ -1,4 +1,5 @@
 from __future__ import annotations
+import concurrent.futures
 
 from typing import TYPE_CHECKING
 
@@ -34,6 +35,8 @@ class AppWindowViewModel(object):
         self.property_changed = EventHandler()
 
         self.api_service = api_service
+        # Executor for parallelizing champion data and icon fetching
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         # Start worker threads
         lockfile_watcher_worker = worker_service.get(Workers.LOCKFILE_WATCHER)
         lockfile_watcher_worker.start()
@@ -41,46 +44,42 @@ class AppWindowViewModel(object):
         lcu_event_processor_worker.com.data_signal.connect(self.on_data)
         lcu_event_processor_worker.start()
 
+    def _fetch_champion_data(self, champion_id: int, context: str):
+        """Fetch champion data, balance info and icon in one go."""
+        champion = self.api_service.data_dragon.fetch_by_champion_id(champion_id)
+        if champion is None:
+            print(f"Warning: could not resolve champion for id {champion_id} ({context})")
+            return None
+
+        champ_name = champion.get("name")
+        if not champ_name:
+            print(f"Warning: champion data missing name for id {champion_id} ({context})")
+            return None
+
+        balance = self.api_service.lol_wiki.fetch_dynamic_balance_by_champion_name(champ_name)
+        if balance is None:
+            print(f"Warning: lol_wiki returned no balance for '{champ_name}' ({context})")
+            return None
+
+        # Icon fetch is also network bound, so it benefits from parallelization
+        balance.champion_icon = self.api_service.data_dragon.fetch_icon_by_champion_id(champion_id)
+        return balance
+
+    def _fetch_balances_parallel(self, champion_ids: list[int], context: str):
+        """Fetch multiple champion balances in parallel using the executor."""
+        futures = [self._executor.submit(self._fetch_champion_data, cid, context) for cid in champion_ids]
+        # Use walrus operator to filter None and avoid redundant .result() calls
+        return [res for f in futures if (res := f.result()) is not None]
+
     @QtCore.Slot(ChampionSelectSessionModel)
     def on_data(self, data: ChampionSelectSessionModel):
         if data is None:
             print("Warning: received None data in on_data")
             return
 
-        team_champion_dynamic_balances = []
-        team_ids = data.team_champion_ids or []
-        for id in team_ids:
-            champion = self.api_service.data_dragon.fetch_by_champion_id(id)
-            if champion is None:
-                print(f"Warning: could not resolve champion for id {id} (team)")
-                continue
-            champ_name = champion.get("name")
-            if not champ_name:
-                print(f"Warning: champion data missing name for id {id} (team)")
-                continue
-            balance = self.api_service.lol_wiki.fetch_dynamic_balance_by_champion_name(champ_name)
-            if balance is None:
-                print(f"Warning: lol_wiki returned no balance for '{champ_name}' (team)")
-                continue
-            balance.champion_icon = self.api_service.data_dragon.fetch_icon_by_champion_id(id)
-            team_champion_dynamic_balances.append(balance)
-        available_champion_dynamic_balances = []
-        avail_ids = data.available_champion_ids or []
-        for id in avail_ids:
-            champion = self.api_service.data_dragon.fetch_by_champion_id(id)
-            if champion is None:
-                print(f"Warning: could not resolve champion for id {id} (available)")
-                continue
-            champ_name = champion.get("name")
-            if not champ_name:
-                print(f"Warning: champion data missing name for id {id} (available)")
-                continue
-            balance = self.api_service.lol_wiki.fetch_dynamic_balance_by_champion_name(champ_name)
-            if balance is None:
-                print(f"Warning: lol_wiki returned no balance for '{champ_name}' (available)")
-                continue
-            balance.champion_icon = self.api_service.data_dragon.fetch_icon_by_champion_id(id)
-            available_champion_dynamic_balances.append(balance)
+        # Parallelize fetching champion data for the entire team and bench
+        team_champion_dynamic_balances = self._fetch_balances_parallel(data.team_champion_ids or [], "team")
+        available_champion_dynamic_balances = self._fetch_balances_parallel(data.available_champion_ids or [], "available")
 
         if team_champion_dynamic_balances:
             self.team_champion_dynamic_balances = team_champion_dynamic_balances
