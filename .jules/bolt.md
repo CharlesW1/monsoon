@@ -9,3 +9,7 @@
 ## 2025-02-13 - Parallel Initialization & Fetching
 **Learning:** Parallelizing network-bound initialization (like `ApiService` components) and multiple fallback fetches (like missing winrates in `LoLalytics`) provides significant startup performance gains (~20-40%) without sacrificing code readability.
 **Action:** Use `concurrent.futures.ThreadPoolExecutor` for independent network-bound tasks during application startup or bulk data retrieval. Always specify `max_workers` when calling external APIs to avoid rate-limiting.
+
+## 2025-05-15 - Event Handler Parallelization
+**Learning:** Sequential I/O in UI event handlers (like `on_data`) causes noticeable lag as the number of entities (champions) increases. Combining all independent fetches (team + available champions) into a single parallel batch maximizes the benefits of concurrency and keeps the UI responsive.
+**Action:** Identify independent I/O tasks in critical event handlers and parallelize them using a persistent executor. Batch multiple lists of entities into one concurrent operation when possible.
