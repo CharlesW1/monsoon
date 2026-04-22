@@ -1,6 +1,6 @@
 import lupa
 import requests
-from bs4 import BeautifulSoup
+import re
 from lupa import LuaRuntime
 
 from models import DynamicBalanceModel, BalanceLever
@@ -53,12 +53,12 @@ class LolWiki:
         if req.status_code != 200:
             raise Exception("Failed to get Module:ChampionData from LoL Fandom")
 
-        soup = BeautifulSoup(req.text, "html.parser")
-        select = soup.select("pre.mw-code")
-        if len(select) != 1:
+        # Optimized HTML parsing using regex
+        match = re.search(r'<pre[^>]*class="[^"]*mw-code[^"]*"[^>]*>(.*?)</pre>', req.text, re.DOTALL)
+        if not match:
             raise Exception("Failed to select Module:ChampionData from LoL Fandom")
 
-        championdata_module = select[0].text
+        championdata_module = match.group(1)
         return championdata_module
 
     def _process_championdata_module(self):
