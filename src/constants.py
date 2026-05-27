@@ -17,5 +17,9 @@ class Workers(Enum):
     LCU_EVENT_PROCESSOR = 1
 
 
+class App:
+    EXECUTOR_WORKERS = 10
+
+
 class SettingsSchema:
     DEFAULT = ("", "")
