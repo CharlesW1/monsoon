@@ -12,6 +12,10 @@ class Monsoon:
     HEIGHT = 720
 
 
+class App:
+    EXECUTOR_WORKERS = 10
+
+
 class Workers(Enum):
     LOCKFILE_WATCHER = 0
     LCU_EVENT_PROCESSOR = 1

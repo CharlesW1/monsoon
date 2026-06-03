@@ -9,3 +9,7 @@
 ## 2025-02-13 - Parallel Initialization & Fetching
 **Learning:** Parallelizing network-bound initialization (like `ApiService` components) and multiple fallback fetches (like missing winrates in `LoLalytics`) provides significant startup performance gains (~20-40%) without sacrificing code readability.
 **Action:** Use `concurrent.futures.ThreadPoolExecutor` for independent network-bound tasks during application startup or bulk data retrieval. Always specify `max_workers` when calling external APIs to avoid rate-limiting.
+
+## 2025-02-14 - Concurrent Champion Processing & Lifecycle Management
+**Learning:** Parallelizing champion data and icon fetching in the main view model's session update loop (using a persistent `ThreadPoolExecutor`) significantly reduces UI-blocking latency, especially when processing multiple champions concurrently (e.g., team and bench). However, classes using persistent executors must implement `__del__` to ensure proper resource cleanup and avoid thread leakage.
+**Action:** Use separate batches of futures for distinct categories (like team vs. available) to maintain indexing integrity and category separation. Implement `__del__` for executor shutdown.
