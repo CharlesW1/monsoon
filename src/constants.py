@@ -10,6 +10,7 @@ class Monsoon:
             "properties are trademarks or registered trademarks of Riot Games, Inc. "
     WIDTH = 1280
     HEIGHT = 720
+    EXECUTOR_WORKERS = 10
 
 
 class Workers(Enum):
