@@ -4,6 +4,8 @@ from enum import Enum
 class Monsoon:
     TITLE = "Monsoon"
     VERSION = "2.2.11"
+    # Thread pool worker count for parallel processing
+    EXECUTOR_WORKERS = 10
     AUTHOR = "ChOwOs#Snerp"
     LEGAL = "Monsoon isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone " \
             "officially involved in producing or managing Riot Games properties. Riot Games, and all associated " \
