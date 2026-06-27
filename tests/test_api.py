@@ -1,4 +1,3 @@
-import pytest
 from src.apis import DataDragon, LolWiki
 
 

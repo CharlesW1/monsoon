@@ -4,11 +4,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from views import AppWindowView, SystemTray
-from utils import ResourceHelper
+from utils import ResourceHelper, QtHelpers
 
 from dependency_injector.wiring import Provide, inject
 from PySide6 import QtWidgets, QtGui
-import os
 import traceback
 import qdarktheme
 
@@ -49,7 +48,7 @@ class ApplicationHostService:
     def stop(self):
         """Stops our main application.
     """
-        os._exit(0)
+        QtHelpers.terminate_application()
 
     def on_exception(self):
         """Prepare to gracefully exit program.

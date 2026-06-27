@@ -19,7 +19,7 @@ class AboutWindowViewModel:
         self.labels = [
             f"Version {Monsoon.VERSION}",
             f"Created by {Monsoon.AUTHOR}",
-            f"Made with love, bees, and kitties. <3"
+            "Made with love, bees, and kitties. <3"
         ]
         self.disclaimer = Monsoon.LEGAL
 

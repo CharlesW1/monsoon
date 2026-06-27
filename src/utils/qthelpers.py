@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 
 from PySide6 import QtWidgets
@@ -9,6 +10,17 @@ class QtStretches(Enum):
 
 
 class QtHelpers:
+    @staticmethod
+    def terminate_application() -> None:
+        """Immediately terminate the process.
+
+        Background QThreads (lockfile watcher, LCU event processor) have no
+        graceful stop mechanism, so a normal QApplication.quit() would leave
+        them running and the process hanging. os._exit() is used deliberately
+        until those workers support cooperative shutdown.
+        """
+        os._exit(0)
+
     @staticmethod
     def create_size_policy(stretch: QtStretches, factor: int) -> QtWidgets.QSizePolicy:
         sp = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)

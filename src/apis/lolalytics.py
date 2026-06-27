@@ -4,6 +4,15 @@ import re
 import concurrent.futures
 from bs4 import BeautifulSoup
 
+# Index in data['objs'] after which champion-keyed dicts start appearing.
+CHAMPION_DICT_SCAN_START = 265
+# Index in data['objs'] after which per-champion winrate data begins.
+WINRATE_SCAN_START = 1000
+# Plausible ARAM winrate bounds (%) used to distinguish winrate values from
+# unrelated numeric fields (pick rate, games played, etc.) in the obfuscated payload.
+MIN_PLAUSIBLE_WINRATE = 38
+MAX_PLAUSIBLE_WINRATE = 67
+
 
 class LoLalytics:
     def __init__(self):
@@ -21,8 +30,6 @@ class LoLalytics:
         # DEBUG: print processed winrates
         # for key, value in sorted(self.__winrates_by_champ.items()):
         #     print(f"- {key}: {value}")
-
-    # ...existing code... (retry helper intentionally removed to keep network calls simple)
 
     def _fetch_winrate_json(self) -> tuple[list, list]:
         """Fetch the json from lolalytics.com that contains ARAM win rates for each
@@ -42,8 +49,6 @@ class LoLalytics:
         """
         # fetch page containing tierlist data
         response = self.session.get(self.url)
-
-        print(response.status_code)
 
         if response.status_code != 200:
             raise Exception("LoLalytics did not respond 200")
@@ -68,16 +73,16 @@ class LoLalytics:
 
             # grab the {champ : ?? id } dictionary
             for i, x in enumerate(data['objs']):
-                if isinstance(x, dict) and i > 265:
+                if isinstance(x, dict) and i > CHAMPION_DICT_SCAN_START:
                     numChamps = len(list(x.keys()))
                     champs = list(x.keys())
                     break
-            
+
             # find index of average wr info (marks begining of champ specific info)
-            for i, x in enumerate(data['objs'][1000:]):
+            for i, x in enumerate(data['objs'][WINRATE_SCAN_START:]):
                 # Data may be returned as int or float; ensure robust comparison
                 if isinstance(x, (int, float)) and x == avgWR:
-                    avgWRIndex = i + 1000
+                    avgWRIndex = i + WINRATE_SCAN_START
                     break
             
             # organize champ data by champ (some info is randomly missing for each champ)
@@ -90,15 +95,13 @@ class LoLalytics:
                 i+=1
 
             return champs, champsData
-        except:
-            raise Exception("Failed to grab JSON from LoLalytics")
+        except Exception as e:
+            raise Exception("Failed to grab JSON from LoLalytics") from e
 
     def _fetch_winrate_for_champ(self, champ) -> float:
         """Visit champion page directly and grab winrate info"""
         print(f"Fetching winrate for missing champion {champ} from LoLalytics")
         response = self.session.get(self.champ_url.format(champ))
-
-        print(response.status_code)
 
         if response.status_code != 200:
             raise Exception("LoLalytics did not respond 200")
@@ -114,10 +117,8 @@ class LoLalytics:
                 return float(match.group(1))
             
             return -1
-        except:
-            raise Exception("Failed to find win rate for {}".format(champ))
-
-        
+        except Exception as e:
+            raise Exception("Failed to find win rate for {}".format(champ)) from e
 
 
     def _process_winrate_data(self) -> dict:
@@ -136,7 +137,7 @@ class LoLalytics:
             if len(data) < 1:
                 continue
             # first slot is wr as decimal
-            if isinstance(data[0], (int, float)) and 38 < data[0] and data[0] < 67:
+            if isinstance(data[0], (int, float)) and MIN_PLAUSIBLE_WINRATE < data[0] < MAX_PLAUSIBLE_WINRATE:
                 winrates[champ] = data[0]
                 wrById[data[-1]['wr']] = (data[0], champ)
                 continue
@@ -145,13 +146,13 @@ class LoLalytics:
                 continue
 
             # second slot is wr as decimal
-            if isinstance(data[1], (int, float)) and 38 < data[1] and data[1] < 67:
+            if isinstance(data[1], (int, float)) and MIN_PLAUSIBLE_WINRATE < data[1] < MAX_PLAUSIBLE_WINRATE:
                 winrates[champ] = data[1]
                 wrById[data[-1]['wr']] = (data[1], champ)
                 continue
 
             # wr happens to be int first slot (check next slot is delta/pr)
-            if (isinstance(data[0], int) and 38 < data[0] and data[0] < 67 and
+            if (isinstance(data[0], int) and MIN_PLAUSIBLE_WINRATE < data[0] < MAX_PLAUSIBLE_WINRATE and
                 isinstance(data[1], float) and data[1] < 10):
                 winrates[champ] = data[0]
                 wrById[data[-1]['wr']] = (data[0], champ)
@@ -226,6 +227,3 @@ class LoLalytics:
 
         print(f"Warning: could not find winrate for champion '{champ}'")
         return ""
-
-if __name__ == "__main__":
-    api = LoLalytics()
