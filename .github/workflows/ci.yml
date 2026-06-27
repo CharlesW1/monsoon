@@ -39,4 +39,4 @@ jobs:
         run: pip install requests beautifulsoup4 lupa lcu-driver pytest
 
       - name: Run pytest
-        run: pytest tests/ -v
+        run: python -m pytest tests/ -v
