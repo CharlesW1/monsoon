@@ -9,7 +9,3 @@
 ## 2025-02-13 - Parallel Initialization & Fetching
 **Learning:** Parallelizing network-bound initialization (like `ApiService` components) and multiple fallback fetches (like missing winrates in `LoLalytics`) provides significant startup performance gains (~20-40%) without sacrificing code readability.
 **Action:** Use `concurrent.futures.ThreadPoolExecutor` for independent network-bound tasks during application startup or bulk data retrieval. Always specify `max_workers` when calling external APIs to avoid rate-limiting.
-
-## 2026-05-06 - Parallel Processing Categorization Bug
-**Learning:** Combining multiple independent data lists (e.g., team champions and available champions) into a single parallelized batch and filtering 'None' results can cause index shifting. This leads to data from one category leaking into another if some requests fail.
-**Action:** Use separate batches of futures or a mapping (dict) to maintain category integrity when parallelizing multiple data sources that must remain distinct.
