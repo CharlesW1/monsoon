@@ -3,7 +3,7 @@ from enum import Enum
 
 class Monsoon:
     TITLE = "Monsoon"
-    VERSION = "2.2.12"
+    VERSION = "2.2.13"
     # Thread pool worker count for parallel processing
     EXECUTOR_WORKERS = 10
     AUTHOR = "ChOwOs#Snerp"
