@@ -75,7 +75,8 @@ class LoLalytics:
             
             # find index of average wr info (marks begining of champ specific info)
             for i, x in enumerate(data['objs'][1000:]):
-                if isinstance(x, float) and x == avgWR:
+                # Data may be returned as int or float; ensure robust comparison
+                if isinstance(x, (int, float)) and x == avgWR:
                     avgWRIndex = i + 1000
                     break
             
