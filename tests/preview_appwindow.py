@@ -4,7 +4,6 @@ import sys
 sys.path.append(os.path.abspath("./src/"))
 
 from src.apis import LolWiki, DataDragon
-from src.models import DynamicBalanceModel
 from src.services import WorkerService, ApiService
 from src.views import AppWindowView
 from src.viewmodels import AppWindowViewModel

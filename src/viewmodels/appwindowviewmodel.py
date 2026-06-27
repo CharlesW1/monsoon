@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import concurrent.futures
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.services import WorkerService, ApiService
