@@ -6,9 +6,10 @@ if TYPE_CHECKING:
     from views import AboutWindowView
     from viewmodels import SystemTrayViewModel
 
+from utils import QtHelpers
+
 from PySide6 import QtWidgets
 from dependency_injector.wiring import Provide, inject
-import os
 import webbrowser
 
 
@@ -52,4 +53,4 @@ class SystemTray(QtWidgets.QSystemTrayIcon):
         webbrowser.open(url)
 
     def _exit_application(self):
-        os._exit(0)
+        QtHelpers.terminate_application()

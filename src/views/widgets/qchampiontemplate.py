@@ -82,6 +82,3 @@ class QChampionTemplate(QtWidgets.QWidget):
       }
       """)
             self.champion_modifiers_list_box.layout.addWidget(label)
-
-    def set_champion_modifiers_stylesheet(self, stylesheet: str) -> None:
-        self.champion_textblock_label.setStyleSheet(stylesheet)

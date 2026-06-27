@@ -30,11 +30,10 @@ class CommunicationPort(QObject):
 
 
 class WorkerService:
-    workers_dictionary: Dict[Workers, QThread] = dict()
-
     def __init__(
             self
     ):
+        self.workers_dictionary: Dict[Workers, QThread] = dict()
         self.workers_dictionary[Workers.LOCKFILE_WATCHER] = LockfileWatcherWorker()
         self.workers_dictionary[Workers.LCU_EVENT_PROCESSOR] = LcuEventProcessorWorker()
 
@@ -78,7 +77,7 @@ class LockfileWatcherWorker(QThread):
     lockfile_create_signal = Signal()
     lockfile_delete_signal = Signal()
 
-    def __init___(self):
+    def __init__(self):
         QThread.__init__(self)
         self.isRunning = False
 
@@ -87,7 +86,7 @@ class LockfileWatcherWorker(QThread):
         event_handler = LockfileHandler()
         event_handler.lockfile_changed += self.emit_signal
         observer = Observer()
-        observer.schedule(event_handler, "C:\Riot Games\League of Legends")
+        observer.schedule(event_handler, r"C:\Riot Games\League of Legends")
         observer.start()
         while self.isRunning:
             time.sleep(1)
@@ -109,5 +108,5 @@ class LockfileHandler(FileSystemEventHandler):
     def on_any_event(self, event: FileSystemEvent):
         path: str = event.src_path
         if "lockfile" in path:
-            if not "_" in path:
+            if "_" not in path:
                 self.lockfile_changed.invoke(self, event.event_type)

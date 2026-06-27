@@ -38,7 +38,7 @@ class AppWindowViewModel(object):
         self.api_service = api_service
 
         # Persistent ThreadPoolExecutor for parallelizing data fetches
-        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=Monsoon.EXECUTOR_WORKERS)
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=Monsoon.EXECUTOR_WORKERS)
 
         # Start worker threads
         lockfile_watcher_worker = worker_service.get(Workers.LOCKFILE_WATCHER)
@@ -49,8 +49,8 @@ class AppWindowViewModel(object):
 
     def __del__(self):
         # Ensure executor is shut down gracefully
-        if hasattr(self, "__executor"):
-            self.__executor.shutdown(wait=False)
+        if hasattr(self, "_executor"):
+            self._executor.shutdown(wait=False)
 
     def _fetch_champion_balance(self, champion_id: int) -> DynamicBalanceModel | None:
         """Helper to fetch all required data for a single champion."""
@@ -84,8 +84,8 @@ class AppWindowViewModel(object):
         avail_ids = data.available_champion_ids or []
 
         # Submit all tasks to the executor
-        team_futures = [self.__executor.submit(self._fetch_champion_balance, cid) for cid in team_ids]
-        avail_futures = [self.__executor.submit(self._fetch_champion_balance, cid) for cid in avail_ids]
+        team_futures = [self._executor.submit(self._fetch_champion_balance, cid) for cid in team_ids]
+        avail_futures = [self._executor.submit(self._fetch_champion_balance, cid) for cid in avail_ids]
 
         # Use walrus operator for efficient result retrieval and null filtering
         team_champion_dynamic_balances = [
