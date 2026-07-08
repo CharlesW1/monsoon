@@ -17,3 +17,7 @@
 ## 2025-02-14 - Parallelizing Session Updates
 **Learning:** Sequential processing of multiple champions (up to 15) in session updates creates a significant UI lag due to cumulative network latency for balance data and icons. Parallelizing these fetches with a persistent `ThreadPoolExecutor` and using the walrus operator for efficient result gathering can reduce update time by ~85% (from ~0.75s to ~0.10s).
 **Action:** Parallelize IO-bound tasks in session update loops using a persistent `ThreadPoolExecutor`. Use separate future batches for distinct UI categories (e.g., team vs. bench) to maintain data integrity.
+
+## 2025-02-15 - Redundant Metadata Lookups
+**Learning:** Using champion names as primary keys in UI-triggered lookups (like session updates) often necessitates redundant metadata calls to resolve IDs to names. Transitioning to ID-based indexing for all internal caches (Wiki data, icons) allows for direct O(1) retrieval from the raw identifiers provided by the LCU.
+**Action:** Always prefer numeric IDs as primary keys for internal caches and lookup tables when the upstream source (like LCU) primarily operates on IDs.

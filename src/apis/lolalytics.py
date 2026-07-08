@@ -63,9 +63,13 @@ class LoLalytics:
             
             # process div for avgWR (needed to parse the script json object dynamically)
             text = div.get_text(strip=True)
-            match = re.search(r'(\d+\.\d+)', text)
+            match = re.search(r'(\d+\.?\d*)', text)
+            avgWR = None
             if match:
                 avgWR = float(match.group(1))
+
+            if avgWR is None:
+                raise Exception("Failed to find average winrate in LoLalytics HTML")
 
             # process script_tag for the scripted json object
             json_text = script_tag.string.strip()  

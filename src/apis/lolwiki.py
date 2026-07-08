@@ -23,12 +23,25 @@ class LolWiki:
             self.__championdata_module = future_module.result()
             self.__LoLalytics = future_lolalytics.result()
 
-        self.__dynamic_balances_by_key = self._process_championdata_module()
+        self.__dynamic_balances_by_name, self.__dynamic_balances_by_id = self._process_championdata_module()
 
-        print(f"Processed {len(self.__dynamic_balances_by_key)} champions from LoL Fandom Module:ChampionData")
+        print(f"Processed {len(self.__dynamic_balances_by_name)} champions from LoL Fandom Module:ChampionData")
         # DEBUG: print processed dynamic balances items
-        # for key, value in sorted(self.__dynamic_balances_by_key.items()):
+        # for key, value in sorted(self.__dynamic_balances_by_name.items()):
         #     print(f"- {key}: {value.format_balance_levers()}")
+
+    def fetch_dynamic_balance_by_champion_id(self, champion_id: int) -> DynamicBalanceModel:
+        """Finds a DynamicBalanceModel instance for a champion ID. May return None
+    as not all champions have balance changes applied in ARAM.
+
+    Args:
+        champion_id (int): Champion ID to find with.
+
+    Returns:
+        DynamicBalanceModel: Represents the dynamic balance changes for a
+        champion in ARAM from Module:ChampionData.
+    """
+        return self.__dynamic_balances_by_id.get(champion_id)
 
     def fetch_dynamic_balance_by_champion_name(self, name) -> DynamicBalanceModel:
         """Finds a DynamicBalanceModel instance for a champion name. May return None
@@ -38,10 +51,10 @@ class LolWiki:
         name (str): Champion name to find with.
 
     Returns:
-        DynamicBalanceModel: Represents the dynamic balance changes for a 
+        DynamicBalanceModel: Represents the dynamic balance changes for a
         champion in ARAM from Module:ChampionData.
     """
-        value = self.__dynamic_balances_by_key.get(name)
+        value = self.__dynamic_balances_by_name.get(name)
         return value
 
     def _fetch_championdata_module(self) -> str:
@@ -102,7 +115,8 @@ class LolWiki:
             raise Exception("Failed to evaluate Module:ChampionData, stopping as security precaution")
 
         # Create dynamic balance model data for each champion
-        dynamic_balances = {}
+        dynamic_balances_by_name = {}
+        dynamic_balances_by_id = {}
         # Iterate directly over Lua table items to avoid unnecessary list allocations
         for champion_name, champion_data in table.items():
             champion_id = champion_data["id"]
@@ -115,11 +129,13 @@ class LolWiki:
                 for stat_name, modifier in aram_stats.items()
                 if modifier != 1
             ]
-            dynamic_balances[champion_name] = DynamicBalanceModel(
+            model = DynamicBalanceModel(
                 champion_id=champion_id,
                 rank_winrate=rank_winrate,
                 champion_name=champion_name,
                 balance_levers=balance_levers
             )
+            dynamic_balances_by_name[champion_name] = model
+            dynamic_balances_by_id[champion_id] = model
 
-        return dynamic_balances
+        return dynamic_balances_by_name, dynamic_balances_by_id
