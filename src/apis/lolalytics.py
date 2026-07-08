@@ -63,7 +63,7 @@ class LoLalytics:
             
             # process div for avgWR (needed to parse the script json object dynamically)
             text = div.get_text(strip=True)
-            match = re.search(r'(\d+\.\d+)', text)
+            match = re.search(r'(\d+\.?\d*)', text)
             avgWR = None
             if match:
                 avgWR = float(match.group(1))
