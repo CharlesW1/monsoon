@@ -37,16 +37,17 @@ class DataDragon:
 
     def fetch_icon_by_champion_id(self, champion_id):
         """Fetch champion icon using O(1) lookup and cached icons"""
-        champion = self.fetch_by_champion_id(champion_id)
-        if champion is None:
-            raise Exception("Invalid champion id")
+        # Check cache by ID first to avoid redundant metadata lookups
+        if champion_id not in self.champion_icons:
+            champion = self.fetch_by_champion_id(champion_id)
+            if champion is None:
+                raise Exception("Invalid champion id")
 
-        champion_name = champion['id']
+            champion_name = champion['id']
 
-        if champion_name not in self.champion_icons:
             req = self.session.get(f"{self.url}/cdn/{self.latest_version}/img/champion/{champion_name}.png")
             if req.status_code != 200:
                 raise Exception("Failed to get champion icon from DataDragon")
-            self.champion_icons[champion_name] = req.content
+            self.champion_icons[champion_id] = req.content
 
-        return self.champion_icons[champion_name]
+        return self.champion_icons[champion_id]

@@ -54,19 +54,10 @@ class AppWindowViewModel(object):
 
     def _fetch_champion_balance(self, champion_id: int) -> DynamicBalanceModel | None:
         """Helper to fetch all required data for a single champion."""
-        champion = self.api_service.data_dragon.fetch_by_champion_id(champion_id)
-        if champion is None:
-            print(f"Warning: could not resolve champion for id {champion_id}")
-            return None
-
-        champ_name = champion.get("name")
-        if not champ_name:
-            print(f"Warning: champion data missing name for id {champion_id}")
-            return None
-
-        balance = self.api_service.lol_wiki.fetch_dynamic_balance_by_champion_name(champ_name)
+        # Use direct ID-based lookup to avoid redundant DataDragon metadata calls
+        balance = self.api_service.lol_wiki.fetch_dynamic_balance_by_champion_id(champion_id)
         if balance is None:
-            print(f"Warning: lol_wiki returned no balance for '{champ_name}'")
+            print(f"Warning: lol_wiki returned no balance for champion id {champion_id}")
             return None
 
         # Fetch icon (uses connection pooling and cache in DataDragon)
