@@ -17,3 +17,7 @@
 ## 2025-02-14 - Parallelizing Session Updates
 **Learning:** Sequential processing of multiple champions (up to 15) in session updates creates a significant UI lag due to cumulative network latency for balance data and icons. Parallelizing these fetches with a persistent `ThreadPoolExecutor` and using the walrus operator for efficient result gathering can reduce update time by ~85% (from ~0.75s to ~0.10s).
 **Action:** Parallelize IO-bound tasks in session update loops using a persistent `ThreadPoolExecutor`. Use separate future batches for distinct UI categories (e.g., team vs. bench) to maintain data integrity.
+
+## 2025-02-15 - Streamlining Cross-Service Lookups
+**Learning:** Redundant lookups across services (e.g., resolving a name in DataDragon just to fetch balance in LolWiki) can be eliminated by standardizing on a common key (Champion ID) and indexing it at initialization. Checking caches before metadata lookups further optimizes hot paths.
+**Action:** Standardize on numeric IDs for cross-service data retrieval and always verify cache presence before performing any metadata-driven lookups.
