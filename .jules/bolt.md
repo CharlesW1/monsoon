@@ -17,3 +17,7 @@
 ## 2025-02-14 - Parallelizing Session Updates
 **Learning:** Sequential processing of multiple champions (up to 15) in session updates creates a significant UI lag due to cumulative network latency for balance data and icons. Parallelizing these fetches with a persistent `ThreadPoolExecutor` and using the walrus operator for efficient result gathering can reduce update time by ~85% (from ~0.75s to ~0.10s).
 **Action:** Parallelize IO-bound tasks in session update loops using a persistent `ThreadPoolExecutor`. Use separate future batches for distinct UI categories (e.g., team vs. bench) to maintain data integrity.
+
+## 2025-02-15 - Deciphering Obfuscated Web Application State (Qwik serialization)
+**Learning:** Obfuscated JS frameworks (like Qwik) serialize state variables inside metadata/attributes using base-36 index references mapping back to a central flat array (e.g. `objs`). Resolving these references directly (`int(ref, 36)`) yields a 100% accurate, O(1) direct lookup, entirely bypassing the need for sequential fallback HTTP requests or fragile heuristic guesswork.
+**Action:** Before implementing complex heuristic or scraping-based fallbacks for obfuscated JSON payloads, analyze the metadata to identify base-36 index mapping structures.

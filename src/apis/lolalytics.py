@@ -1,23 +1,17 @@
 import requests
 import json
 import re
-import concurrent.futures
 from bs4 import BeautifulSoup
 
 # Index in data['objs'] after which champion-keyed dicts start appearing.
 CHAMPION_DICT_SCAN_START = 265
 # Index in data['objs'] after which per-champion winrate data begins.
 WINRATE_SCAN_START = 1000
-# Plausible ARAM winrate bounds (%) used to distinguish winrate values from
-# unrelated numeric fields (pick rate, games played, etc.) in the obfuscated payload.
-MIN_PLAUSIBLE_WINRATE = 38
-MAX_PLAUSIBLE_WINRATE = 67
 
 
 class LoLalytics:
     def __init__(self):
         self.url = "https://lolalytics.com/lol/tierlist/aram/?patch=14"
-        self.champ_url = "https://lolalytics.com/lol/{}/aram/build/?patch=14"
         # Reuse TCP connections
         self.session = requests.Session()
         self.__champs, self.__champsData = self._fetch_winrate_json()
@@ -70,16 +64,17 @@ class LoLalytics:
             # process script_tag for the scripted json object
             json_text = script_tag.string.strip()  
             data = json.loads(json_text)
+            self.__objs = data['objs']
 
             # grab the {champ : ?? id } dictionary
-            for i, x in enumerate(data['objs']):
+            for i, x in enumerate(self.__objs):
                 if isinstance(x, dict) and i > CHAMPION_DICT_SCAN_START:
                     numChamps = len(list(x.keys()))
                     champs = list(x.keys())
                     break
 
             # find index of average wr info (marks begining of champ specific info)
-            for i, x in enumerate(data['objs'][WINRATE_SCAN_START:]):
+            for i, x in enumerate(self.__objs[WINRATE_SCAN_START:]):
                 # Data may be returned as int or float; ensure robust comparison
                 if isinstance(x, (int, float)) and x == avgWR:
                     avgWRIndex = i + WINRATE_SCAN_START
@@ -89,8 +84,8 @@ class LoLalytics:
             champsData = [[]]
             i = avgWRIndex+2
             while len(champsData) < numChamps + 1:
-                champsData[-1].append(data['objs'][i])
-                if isinstance(data['objs'][i], dict):
+                champsData[-1].append(self.__objs[i])
+                if isinstance(self.__objs[i], dict):
                     champsData.append([])
                 i+=1
 
@@ -98,89 +93,30 @@ class LoLalytics:
         except Exception as e:
             raise Exception("Failed to grab JSON from LoLalytics") from e
 
-    def _fetch_winrate_for_champ(self, champ) -> float:
-        """Visit champion page directly and grab winrate info"""
-        print(f"Fetching winrate for missing champion {champ} from LoLalytics")
-        response = self.session.get(self.champ_url.format(champ))
-
-        if response.status_code != 200:
-            raise Exception("LoLalytics did not respond 200")
-
-        try:
-            soup = BeautifulSoup(response.text, "html.parser")
-            # Find the specific <p> tag with the given class
-            p_tag = soup.find('p', class_='lolx-links px-2 text-justify text-[14px] leading-normal text-white sm:px-0')
-
-            # Use regex to find the float before the % symbol
-            match = re.search(r'(\d+\.?\d*)%', p_tag.get_text())
-            if match:
-                return float(match.group(1))
-            
-            return -1
-        except Exception as e:
-            raise Exception("Failed to find win rate for {}".format(champ)) from e
-
-
     def _process_winrate_data(self) -> dict:
-        """Process winrate json into dict of cid -> rank, winrate pair"""
+        """Process winrate json into dict of champion -> rank, winrate pair using O(1) direct Qwik JSON lookup.
+
+        The obfuscated winrate is mapped directly in the Qwik JSON `objs` list, and each champion's metadata
+        contains a base-36 index reference 'wr' pointing to its exact winrate value. This eliminates both the
+        heuristic guess-and-fallback logic and any parallel fallback network requests.
+        """
         champs = self.__champs
         champsData = self.__champsData
         winrates = {}
-        wrById = {}
+
         for champ, data in zip(champs, champsData):
-            '''data list is how lolalytics represents the winrate data.
-            It is obfuscated, but is a list of attributes in this order (all values not always present):
-                [rank, winrate, wr delta, pick rate, games, some id dict]
-            # one reason is that they don't show the same wr twice so one champion will be missing
-            '''
-
-            if len(data) < 1:
+            if not data:
                 continue
-            # first slot is wr as decimal
-            if isinstance(data[0], (int, float)) and MIN_PLAUSIBLE_WINRATE < data[0] < MAX_PLAUSIBLE_WINRATE:
-                winrates[champ] = data[0]
-                wrById[data[-1]['wr']] = (data[0], champ)
-                continue
-
-            if len(data) < 2:
-                continue
-
-            # second slot is wr as decimal
-            if isinstance(data[1], (int, float)) and MIN_PLAUSIBLE_WINRATE < data[1] < MAX_PLAUSIBLE_WINRATE:
-                winrates[champ] = data[1]
-                wrById[data[-1]['wr']] = (data[1], champ)
-                continue
-
-            # wr happens to be int first slot (check next slot is delta/pr)
-            if (isinstance(data[0], int) and MIN_PLAUSIBLE_WINRATE < data[0] < MAX_PLAUSIBLE_WINRATE and
-                isinstance(data[1], float) and data[1] < 10):
-                winrates[champ] = data[0]
-                wrById[data[-1]['wr']] = (data[0], champ)
-                continue
-
-        # fill in guessed wr
-        missingInfo = set()
-        for champ, data in zip(champs, champsData):
-            if champ in winrates:
-                continue
-            if data[-1]['wr'] in wrById:
-                winrates[champ] = wrById[data[-1]['wr']][0]
-                continue
-            missingInfo.add(champ)
-
-        # remaining champs seem to have integer wr that is just missing
-        # fetch directly from their champ page in parallel to save time
-        if missingInfo:
-            # Use a limited number of workers to avoid being rate-limited by the host
-            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-                future_to_champ = {executor.submit(self._fetch_winrate_for_champ, champ): champ for champ in missingInfo}
-                for future in concurrent.futures.as_completed(future_to_champ):
-                    champ = future_to_champ[future]
-                    try:
-                        winrates[champ] = future.result()
-                    except Exception as e:
-                        print(f"Error fetching winrate for {champ}: {e}")
-                        winrates[champ] = -1
+            meta = data[-1]
+            if isinstance(meta, dict) and 'wr' in meta:
+                # Convert the base-36 reference index to an integer to perform O(1) lookup in objs
+                try:
+                    wr_idx = int(meta['wr'], 36)
+                    winrates[champ] = self.__objs[wr_idx]
+                except (ValueError, TypeError, IndexError):
+                    winrates[champ] = -1
+            else:
+                winrates[champ] = -1
 
         wrSorted = sorted([(-wr, champ) for champ, wr in winrates.items()])
 
