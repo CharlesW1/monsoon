@@ -2,8 +2,11 @@
 src = ["src"]
 
 [tool.ruff.lint]
-# Default rule set (E4, E7, E9, F) catches real bugs (undefined names, unused
-# imports, syntax errors) without enforcing style/formatting on existing code.
+# Restrict to the default rule set (E4, E7, E9, F): real bugs (undefined names,
+# unused imports, syntax errors) without enforcing style/formatting on existing
+# code. This must be set explicitly -- leaving `select` unset does not restrict
+# ruff to these rules in current versions.
+select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 # __init__.py files intentionally re-export their package's public API via
