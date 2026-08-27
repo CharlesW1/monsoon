@@ -4,16 +4,12 @@ from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
     pass
-from utils import EventHandler, apply_lcu_cmdline_patch
+from utils import EventHandler
 from models import ChampionSelectSessionModel
 from constants import Workers
 
 from PySide6.QtCore import QThread, Signal, QObject
 from lcu_driver import Connector
-
-# Fix lcu-driver's command-line parser before any connection is attempted so it
-# can read modern League client command lines (see utils.lcucompat).
-apply_lcu_cmdline_patch()
 from watchdog.observers import Observer
 from watchdog.events import (
     FileSystemEventHandler,
@@ -72,9 +68,16 @@ class LcuEventProcessorWorker(QThread):
 
     def run(self):
         self.isRunning = True
+        # The connector is a class attribute, so its event loop was created on
+        # the main thread. Give this worker thread its own loop and point the
+        # connector at it before starting; otherwise connection.init() runs on
+        # the wrong loop and the connection drops immediately. connector.start()
+        # then blocks here while a client is connected (and reconnects on its
+        # own when the client restarts).
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self.connector.loop = loop
         self.connector.start()
-        while self.isRunning:
-            asyncio.get_running_loop().run_until_complete(asyncio.sleep(1))
 
 
 class LockfileWatcherWorker(QThread):

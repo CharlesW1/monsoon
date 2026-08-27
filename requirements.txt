@@ -2,7 +2,7 @@ dependency-injector==4.40.0
 requests==2.28.1
 lupa==1.14.1
 beautifulsoup4==4.11.1
-lcu-driver==3.0.0a1
+lcu-driver==3.0.2
 PySide6==6.7.2
 pyqtdarktheme==1.2.1
 watchdog==2.1.9
