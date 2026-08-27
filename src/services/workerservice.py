@@ -4,12 +4,16 @@ from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
     pass
-from utils import EventHandler
+from utils import EventHandler, apply_lcu_cmdline_patch
 from models import ChampionSelectSessionModel
 from constants import Workers
 
 from PySide6.QtCore import QThread, Signal, QObject
 from lcu_driver import Connector
+
+# Fix lcu-driver's command-line parser before any connection is attempted so it
+# can read modern League client command lines (see utils.lcucompat).
+apply_lcu_cmdline_patch()
 from watchdog.observers import Observer
 from watchdog.events import (
     FileSystemEventHandler,
